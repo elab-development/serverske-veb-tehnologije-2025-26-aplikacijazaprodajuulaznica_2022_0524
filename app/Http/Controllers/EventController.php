@@ -100,6 +100,7 @@ class EventController extends Controller
     {
         $this->ensureAdmin($request);
         $this->ensureHasNotStarted($event);
+        $this->ensureHasNoOrders($event);
 
         $validated = $request->validate($this->rules(updating: true));
         $this->ensureValidDateRange($validated, $event);
@@ -119,6 +120,7 @@ class EventController extends Controller
     {
         $this->ensureAdmin($request);
         $this->ensureHasNotStarted($event);
+        $this->ensureHasNoOrders($event);
 
         $event->delete();
 
@@ -170,6 +172,18 @@ class EventController extends Controller
         if ($event->starts_at->lte(now())) {
             throw ValidationException::withMessages([
                 'event' => ['An event that has already started cannot be changed.'],
+            ]);
+        }
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function ensureHasNoOrders(Event $event): void
+    {
+        if ($event->ticketTypes()->whereHas('orders')->exists()) {
+            throw ValidationException::withMessages([
+                'event' => ['An event with existing orders cannot be changed.'],
             ]);
         }
     }

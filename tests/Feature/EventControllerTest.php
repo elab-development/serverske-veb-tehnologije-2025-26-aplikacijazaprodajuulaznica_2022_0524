@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Event;
+use App\Models\Order;
+use App\Models\TicketType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -80,6 +82,34 @@ test('administrators cannot update or delete events that have started', function
     ]);
 
     $this->patchJson("/api/events/{$event->id}", ['title' => 'Too Late'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('event');
+
+    $this->deleteJson("/api/events/{$event->id}")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('event');
+
+    $this->assertDatabaseHas('events', [
+        'id' => $event->id,
+        'title' => $event->title,
+    ]);
+});
+
+test('administrators cannot update or delete events that have orders', function () {
+    Sanctum::actingAs(User::factory()->create(['role' => User::ROLE_ADMIN]));
+
+    $event = Event::factory()->create([
+        'starts_at' => now()->addMonth(),
+        'ends_at' => now()->addMonth()->addHours(3),
+    ]);
+    $ticketType = TicketType::factory()->for($event)->create();
+
+    Order::factory()->create([
+        'ticket_type_id' => $ticketType->id,
+        'status' => Order::STATUS_CANCELLED,
+    ]);
+
+    $this->patchJson("/api/events/{$event->id}", ['title' => 'Cannot Be Changed'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('event');
 
