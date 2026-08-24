@@ -34,6 +34,26 @@ test('events can be listed searched and displayed publicly', function () {
         ->assertJsonPath('event.id', $event->id);
 });
 
+test('events can be sorted by an allowed field and direction', function () {
+    Event::factory()->create(['title' => 'Alpha Event']);
+    Event::factory()->create(['title' => 'Charlie Event']);
+    Event::factory()->create(['title' => 'Bravo Event']);
+
+    $this->getJson('/api/events?sort_by=title&sort_direction=desc')
+        ->assertOk()
+        ->assertJsonPath('sort.by', 'title')
+        ->assertJsonPath('sort.direction', 'desc')
+        ->assertJsonPath('events.0.title', 'Charlie Event')
+        ->assertJsonPath('events.1.title', 'Bravo Event')
+        ->assertJsonPath('events.2.title', 'Alpha Event');
+});
+
+test('event sorting rejects unsupported fields and directions', function () {
+    $this->getJson('/api/events?sort_by=description&sort_direction=sideways')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['sort_by', 'sort_direction']);
+});
+
 test('event management requires authentication', function () {
     $event = Event::factory()->create();
 

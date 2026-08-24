@@ -8,10 +8,20 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class EventController extends Controller
 {
+    private const SORTABLE_FIELDS = [
+        'title',
+        'location',
+        'starts_at',
+        'ends_at',
+        'created_at',
+        'updated_at',
+    ];
+
     /**
      * Display a listing of the resource.
      */
@@ -22,8 +32,13 @@ class EventController extends Controller
             'location' => ['sometimes', 'string', 'max:255'],
             'starts_from' => ['sometimes', 'date'],
             'starts_until' => ['sometimes', 'date'],
+            'sort_by' => ['sometimes', Rule::in(self::SORTABLE_FIELDS)],
+            'sort_direction' => ['sometimes', Rule::in(['asc', 'desc'])],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ]);
+
+        $sortBy = $validated['sort_by'] ?? 'starts_at';
+        $sortDirection = $validated['sort_direction'] ?? 'asc';
 
         $query = Event::query();
 
@@ -50,7 +65,7 @@ class EventController extends Controller
         }
 
         $events = $query
-            ->orderBy('starts_at')
+            ->orderBy($sortBy, $sortDirection)
             ->paginate((int) ($validated['per_page'] ?? 10))
             ->withQueryString();
 
@@ -61,6 +76,10 @@ class EventController extends Controller
                 'last_page' => $events->lastPage(),
                 'per_page' => $events->perPage(),
                 'total' => $events->total(),
+            ],
+            'sort' => [
+                'by' => $sortBy,
+                'direction' => $sortDirection,
             ],
         ]);
     }
