@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\TicketTypeController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,5 +31,12 @@ Route::middleware('auth:sanctum')->group(function (): void {
         'store',
         'update',
         'destroy',
+    ]);
+
+    Route::apiResource('orders', OrderController::class)->only([
+        'index',
+        'store',
+        'show',
+        'update',
     ]);
 });
