@@ -39,4 +39,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         'show',
         'update',
     ]);
+
+    Route::get('/users/{user}/orders', [OrderController::class, 'forUser']);
+    Route::get('/events/{event}/orders', [OrderController::class, 'forEvent']);
 });

@@ -16,6 +16,8 @@ test('order routes require authentication', function () {
     $this->postJson('/api/orders', [])->assertUnauthorized();
     $this->getJson("/api/orders/{$order->id}")->assertUnauthorized();
     $this->patchJson("/api/orders/{$order->id}", [])->assertUnauthorized();
+    $this->getJson("/api/users/{$order->user_id}/orders")->assertUnauthorized();
+    $this->getJson("/api/events/{$order->ticketType->event_id}/orders")->assertUnauthorized();
 });
 
 test('only regular users can create queued orders with server calculated fields', function () {
@@ -117,6 +119,54 @@ test('users list only their orders while administrators list all orders', functi
     $this->getJson('/api/orders')
         ->assertOk()
         ->assertJsonCount(3, 'orders');
+});
+
+test('only administrators can list orders through user and event nested routes', function () {
+    $event = Event::factory()->create();
+    $otherEvent = Event::factory()->create();
+    $ticketType = TicketType::factory()->for($event)->create();
+    $otherTicketType = TicketType::factory()->for($otherEvent)->create();
+    $user = User::factory()->create(['role' => User::ROLE_USER]);
+    $otherUser = User::factory()->create(['role' => User::ROLE_USER]);
+    $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+    $userEventOrder = Order::factory()->create([
+        'user_id' => $user->id,
+        'ticket_type_id' => $ticketType->id,
+    ]);
+    $userOtherEventOrder = Order::factory()->create([
+        'user_id' => $user->id,
+        'ticket_type_id' => $otherTicketType->id,
+    ]);
+    $otherUserEventOrder = Order::factory()->create([
+        'user_id' => $otherUser->id,
+        'ticket_type_id' => $ticketType->id,
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $this->getJson("/api/users/{$user->id}/orders")->assertForbidden();
+    $this->getJson("/api/events/{$event->id}/orders")->assertForbidden();
+
+    Sanctum::actingAs($admin);
+
+    $userOrdersResponse = $this->getJson("/api/users/{$user->id}/orders")
+        ->assertOk()
+        ->assertJsonPath('user_id', $user->id)
+        ->assertJsonCount(2, 'orders')
+        ->assertJsonMissingPath('pagination');
+
+    expect(collect($userOrdersResponse->json('orders'))->pluck('id')->all())
+        ->toEqualCanonicalizing([$userEventOrder->id, $userOtherEventOrder->id]);
+
+    $eventOrdersResponse = $this->getJson("/api/events/{$event->id}/orders")
+        ->assertOk()
+        ->assertJsonPath('event_id', $event->id)
+        ->assertJsonCount(2, 'orders')
+        ->assertJsonMissingPath('pagination');
+
+    expect(collect($eventOrdersResponse->json('orders'))->pluck('id')->all())
+        ->toEqualCanonicalizing([$userEventOrder->id, $otherUserEventOrder->id]);
 });
 
 test('an order can be displayed only by its owner or an administrator', function () {

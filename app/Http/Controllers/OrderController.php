@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\OrderResource;
+use App\Models\Event;
 use App\Models\Order;
 use App\Models\TicketType;
 use App\Models\User;
@@ -62,6 +63,46 @@ class OrderController extends Controller
 
         return response()->json([
             'orders' => OrderResource::collection($query->latest()->get()),
+        ]);
+    }
+
+    /**
+     * Display all orders placed by the specified user.
+     */
+    public function forUser(Request $request, User $user): JsonResponse
+    {
+        $this->ensureAdmin($this->authenticatedUser($request));
+
+        $orders = Order::query()
+            ->with(['user', 'ticketType.event'])
+            ->where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'user_id' => $user->id,
+            'orders' => OrderResource::collection($orders),
+        ]);
+    }
+
+    /**
+     * Display all orders for the specified event.
+     */
+    public function forEvent(Request $request, Event $event): JsonResponse
+    {
+        $this->ensureAdmin($this->authenticatedUser($request));
+
+        $orders = Order::query()
+            ->with(['user', 'ticketType.event'])
+            ->whereHas('ticketType', function ($query) use ($event): void {
+                $query->where('event_id', $event->id);
+            })
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'event_id' => $event->id,
+            'orders' => OrderResource::collection($orders),
         ]);
     }
 
@@ -201,6 +242,11 @@ class OrderController extends Controller
         );
     }
 
+    private function ensureAdmin(User $user): void
+    {
+        abort_unless($user->role === User::ROLE_ADMIN, 403, 'Only administrators can access this order listing.');
+    }
+
     /**
      * @throws ValidationException
      */
@@ -276,7 +322,7 @@ class OrderController extends Controller
 
         throw ValidationException::withMessages(
             collect($invalidFields)
-                ->mapWithKeys(fn(string $field): array => [
+                ->mapWithKeys(fn (string $field): array => [
                     $field => ['Only status can be updated on an order.'],
                 ])
                 ->all()
