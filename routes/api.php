@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\ExternalEventDataController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\TicketTypeController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+Route::get('/external/events', [ExternalEventDataController::class, 'events']);
 
 Route::apiResource('events', EventController::class)->only([
     'index',
