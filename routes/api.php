@@ -12,6 +12,8 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/external/events', [ExternalEventDataController::class, 'events']);
 
+Route::get('/events/export', [EventController::class, 'exportCsv']);
+
 Route::apiResource('events', EventController::class)->only([
     'index',
     'show',

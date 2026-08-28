@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EventController extends Controller
 {
@@ -81,6 +82,59 @@ class EventController extends Controller
                 'by' => $sortBy,
                 'direction' => $sortDirection,
             ],
+        ]);
+    }
+
+    /**
+     * Export all events and ticket availability totals to CSV.
+     */
+    public function exportCsv(): StreamedResponse
+    {
+        $filename = 'events-'.now()->format('Y-m-d-H-i-s').'.csv';
+
+        return response()->streamDownload(function (): void {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'id',
+                'title',
+                'description',
+                'location',
+                'starts_at',
+                'ends_at',
+                'ticket_types_count',
+                'tickets_total',
+                'tickets_available',
+                'created_at',
+                'updated_at',
+            ]);
+
+            Event::query()
+                ->withCount('ticketTypes')
+                ->withSum('ticketTypes as tickets_total', 'quantity_total')
+                ->withSum('ticketTypes as tickets_available', 'quantity_available')
+                ->orderBy('id')
+                ->chunk(200, function ($events) use ($handle): void {
+                    foreach ($events as $event) {
+                        fputcsv($handle, [
+                            $event->id,
+                            $event->title,
+                            $event->description,
+                            $event->location,
+                            $event->starts_at?->toDateTimeString(),
+                            $event->ends_at?->toDateTimeString(),
+                            $event->ticket_types_count,
+                            $event->tickets_total ?? 0,
+                            $event->tickets_available ?? 0,
+                            $event->created_at?->toDateTimeString(),
+                            $event->updated_at?->toDateTimeString(),
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 

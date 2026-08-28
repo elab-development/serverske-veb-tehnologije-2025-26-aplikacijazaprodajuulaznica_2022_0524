@@ -22,6 +22,7 @@ use OpenApi\Annotations as OA;
  * @OA\Tag(name="Ticket Types", description="Tipovi karata dostupni za dogadjaje")
  * @OA\Tag(name="Orders", description="Red cekanja i porudzbine karata")
  * @OA\Tag(name="External", description="Javno dostupni dogadjaji sa Wikidata servisa bez API kljuca")
+ * @OA\Tag(name="Exports", description="CSV eksport podataka")
  *
  * @OA\SecurityScheme(
  *     securityScheme="bearerAuth",
@@ -302,6 +303,24 @@ use OpenApi\Annotations as OA;
  *
  *     @OA\Response(response=422, description="Validation error", @OA\JsonContent(ref="#/components/schemas/ValidationError")),
  *     @OA\Response(response=502, description="External service error", @OA\JsonContent(ref="#/components/schemas/MessageResponse"))
+ * )
+ *
+ * @OA\Get(
+ *     path="/events/export",
+ *     tags={"Events","Exports"},
+ *     summary="CSV eksport dogadjaja",
+ *     description="Javna ruta. Eksportuje sve dogadjaje, broj tipova karata i zbirne kolicine dostupnih i ukupnih karata.",
+ *
+ *     @OA\Response(
+ *         response=200,
+ *         description="CSV file",
+ *
+ *         @OA\MediaType(
+ *             mediaType="text/csv",
+ *
+ *             @OA\Schema(type="string", example="id,title,description,location,starts_at,ends_at,ticket_types_count,tickets_total,tickets_available,created_at,updated_at")
+ *         )
+ *     )
  * )
  *
  * @OA\Get(

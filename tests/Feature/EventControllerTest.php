@@ -54,6 +54,44 @@ test('event sorting rejects unsupported fields and directions', function () {
         ->assertJsonValidationErrors(['sort_by', 'sort_direction']);
 });
 
+test('events and ticket availability totals can be exported to csv publicly', function () {
+    $event = Event::factory()->create([
+        'title' => 'CSV Export Event',
+        'description' => 'Event included in CSV export.',
+        'location' => 'Belgrade Arena',
+        'starts_at' => '2026-12-01 20:00:00',
+        'ends_at' => '2026-12-01 23:00:00',
+    ]);
+
+    TicketType::factory()->for($event)->create([
+        'name' => 'CSV Regular',
+        'quantity_total' => 100,
+        'quantity_available' => 80,
+    ]);
+
+    TicketType::factory()->for($event)->create([
+        'name' => 'CSV VIP',
+        'quantity_total' => 50,
+        'quantity_available' => 20,
+    ]);
+
+    $response = $this->get('/api/events/export');
+
+    $response
+        ->assertOk()
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+    expect($response->headers->get('content-disposition'))
+        ->toStartWith('attachment; filename=events-');
+
+    $csv = $response->streamedContent();
+
+    expect($csv)
+        ->toContain('id,title,description,location,starts_at,ends_at,ticket_types_count,tickets_total,tickets_available,created_at,updated_at')
+        ->toContain('CSV Export Event')
+        ->toContain(',2,150,100,');
+});
+
 test('event management requires authentication', function () {
     $event = Event::factory()->create();
 

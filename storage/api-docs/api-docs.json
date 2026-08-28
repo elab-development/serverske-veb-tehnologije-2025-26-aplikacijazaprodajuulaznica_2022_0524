@@ -336,6 +336,30 @@
                 }
             }
         },
+        "/events/export": {
+            "get": {
+                "tags": [
+                    "Events",
+                    "Exports"
+                ],
+                "summary": "CSV eksport dogadjaja",
+                "description": "Javna ruta. Eksportuje sve dogadjaje, broj tipova karata i zbirne kolicine dostupnih i ukupnih karata.",
+                "operationId": "0a990276ac88fa3c827ad60d2aa8cf68",
+                "responses": {
+                    "200": {
+                        "description": "CSV file",
+                        "content": {
+                            "text/csv": {
+                                "schema": {
+                                    "type": "string",
+                                    "example": "id,title,description,location,starts_at,ends_at,ticket_types_count,tickets_total,tickets_available,created_at,updated_at"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/events": {
             "get": {
                 "tags": [
@@ -2435,6 +2459,10 @@
         {
             "name": "External",
             "description": "Javno dostupni dogadjaji sa Wikidata servisa bez API kljuca"
+        },
+        {
+            "name": "Exports",
+            "description": "CSV eksport podataka"
         }
     ]
 }
